@@ -115,6 +115,18 @@ int pmemkv_config_put_object(pmemkv_config *config, const char *key, void *value
 	});
 }
 
+int pmemkv_config_put_object_cb(pmemkv_config *config, const char *key, void *value,
+				void *(*getter)(void *), void (*deleter)(void *))
+{
+	if (!config || !getter)
+		return PMEMKV_STATUS_INVALID_ARGUMENT;
+
+	return catch_and_return_status(__func__, [&] {
+		config_to_internal(config)->put_object(key, value, deleter, getter);
+		return PMEMKV_STATUS_OK;
+	});
+}
+
 int pmemkv_config_put_int64(pmemkv_config *config, const char *key, int64_t value)
 {
 	if (!config)
@@ -211,13 +223,12 @@ int pmemkv_config_get_string(pmemkv_config *config, const char *key, const char 
 
 int pmemkv_open(const char *engine_c_str, pmemkv_config *config, pmemkv_db **db)
 {
+	std::unique_ptr<pmem::kv::internal::config> cfg(config_to_internal(config));
+
 	if (!db)
 		return PMEMKV_STATUS_INVALID_ARGUMENT;
 
 	return catch_and_return_status(__func__, [&] {
-		std::unique_ptr<pmem::kv::internal::config> cfg(
-			config_to_internal(config));
-
 		auto engine = pmem::kv::engine_base::create_engine(engine_c_str,
 								   std::move(cfg));
 
