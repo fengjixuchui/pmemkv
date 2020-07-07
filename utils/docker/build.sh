@@ -52,10 +52,14 @@ containerName=pmemkv-${OS}-${OS_VER}
 
 if [[ "$command" == "" ]]; then
 	case $TYPE in
-		normal)
+		debug)
 			builds=(tests_gcc_debug_cpp11
-					tests_gcc_debug_cpp14
-					test_installation)
+					tests_gcc_debug_cpp14)
+			command="./run-build.sh ${builds[@]}";
+			;;
+		release)
+			builds=(tests_clang_release_cpp20
+					test_release_installation)
 			command="./run-build.sh ${builds[@]}";
 			;;
 		valgrind)
@@ -134,6 +138,7 @@ docker run --privileged=true --name=$containerName -i $TTY \
 	--env COVERITY_SCAN_TOKEN=$COVERITY_SCAN_TOKEN \
 	--env COVERITY_SCAN_NOTIFICATION_EMAIL=$COVERITY_SCAN_NOTIFICATION_EMAIL \
 	--env TEST_PACKAGES=${TEST_PACKAGES:-ON} \
+	--env TESTS_LONG=${TESTS_LONG:-OFF} \
 	--env BUILD_JSON_CONFIG=${BUILD_JSON_CONFIG:-ON} \
 	--env CHECK_CPP_STYLE=${CHECK_CPP_STYLE:-ON} \
 	--env DEFAULT_TEST_DIR=/dev/shm \
