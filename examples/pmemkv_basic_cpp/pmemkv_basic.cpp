@@ -9,7 +9,14 @@
 #include <cstdlib>
 #include <iostream>
 #include <libpmemkv.hpp>
+#include <sstream>
 
+#define ASSERT(expr)                                                                     \
+	do {                                                                             \
+		if (!(expr))                                                             \
+			std::cout << pmemkv_errormsg() << std::endl;                     \
+		assert(expr);                                                            \
+	} while (0)
 #define LOG(msg) std::cout << msg << std::endl
 
 using namespace pmem::kv;
@@ -27,35 +34,37 @@ int main(int argc, char *argv[])
 	LOG("Creating config");
 	config cfg;
 
-	status s = cfg.put_string("path", argv[1]);
-	assert(s == status::OK);
-	s = cfg.put_uint64("size", SIZE);
-	assert(s == status::OK);
-	s = cfg.put_uint64("force_create", 1);
-	assert(s == status::OK);
+	status s = cfg.put_path(argv[1]);
+	ASSERT(s == status::OK);
+	s = cfg.put_size(SIZE);
+	ASSERT(s == status::OK);
+	s = cfg.put_force_create(true);
+	ASSERT(s == status::OK);
 
 	LOG("Opening pmemkv database with 'cmap' engine");
 	db *kv = new db();
-	assert(kv != nullptr);
+	ASSERT(kv != nullptr);
 	s = kv->open("cmap", std::move(cfg));
-	assert(s == status::OK);
+	ASSERT(s == status::OK);
 
 	LOG("Putting new key");
 	s = kv->put("key1", "value1");
-	assert(s == status::OK);
+	ASSERT(s == status::OK);
 
 	size_t cnt;
 	s = kv->count_all(cnt);
-	assert(s == status::OK && cnt == 1);
+	ASSERT(s == status::OK && cnt == 1);
 
 	LOG("Reading key back");
 	std::string value;
 	s = kv->get("key1", &value);
-	assert(s == status::OK && value == "value1");
+	ASSERT(s == status::OK && value == "value1");
 
 	LOG("Iterating existing keys");
-	kv->put("key2", "value2");
-	kv->put("key3", "value3");
+	s = kv->put("key2", "value2");
+	ASSERT(s == status::OK);
+	s = kv->put("key3", "value3");
+	ASSERT(s == status::OK);
 	kv->get_all([](string_view k, string_view v) {
 		LOG("  visited: " << k.data());
 		return 0;
@@ -63,13 +72,23 @@ int main(int argc, char *argv[])
 
 	LOG("Defragmenting the database");
 	s = kv->defrag(0, 100);
-	assert(s == status::OK);
+	ASSERT(s == status::OK);
 
 	LOG("Removing existing key");
 	s = kv->remove("key1");
-	assert(s == status::OK);
+	ASSERT(s == status::OK);
 	s = kv->exists("key1");
-	assert(s == status::NOT_FOUND);
+	ASSERT(s == status::NOT_FOUND);
+
+	/* Examples of using pmem:kv:status with std::ostream and operator<<,
+	 * it's useful for debugging. */
+	/* Print status */
+	std::cout << s << std::endl;
+
+	/* Write status to ostringstream */
+	std::ostringstream oss;
+	oss << s;
+	assert(oss.str() == "NOT_FOUND (2)");
 
 	LOG("Closing database");
 	delete kv;

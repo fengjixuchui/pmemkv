@@ -20,7 +20,7 @@ namespace kv
 {
 
 stree::stree(std::unique_ptr<internal::config> cfg)
-    : pmemobj_engine_base(cfg), config(std::move(cfg))
+    : pmemobj_engine_base(cfg, "pmemkv_stree"), config(std::move(cfg))
 {
 	Recover();
 	LOG("Started ok");
@@ -42,7 +42,6 @@ status stree::count_all(std::size_t &cnt)
 	check_outside_tx();
 
 	cnt = my_btree->size();
-	assert(cnt >= 0);
 
 	return status::OK;
 }

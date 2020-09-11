@@ -1,34 +1,36 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright 2019, Intel Corporation
+# Copyright 2019-2020, Intel Corporation
+
+function(strip_example PATH VAL)
+	# Prepare example code to inject into man page.
+	# Read file file pointed by ${PATH}, remove comments (with the license
+	# and the file description) up to the first preprocessor's directive,
+	# and place it in ${VAL} in caller scope
+	file(READ
+		${PATH}
+		example_content)
+	string(REGEX REPLACE "([/]+[*/]+).*([*]+[/]+)([\n]+#)" "#"
+		example_content "${example_content}")
+	set(${VAL} "${example_content}" PARENT_SCOPE)
+endfunction()
 
 add_check_whitespace(man
-	${CMAKE_CURRENT_SOURCE_DIR}/*.md)
+	${CMAKE_CURRENT_SOURCE_DIR}/*.*)
 
+# prepare C documenation (using manpage format)
 find_program(PANDOC NAMES pandoc)
 if(PANDOC)
-	# Prepare C_EXAMPLE content to inject, based on the code
-	# of the 'examples/pmemkv_basic_c/pmemkv_basic.c' example;
-	# remove comments (with the license and the file description)
-	# up to the first preprocessor's directive.
-	file(READ
-		${CMAKE_SOURCE_DIR}/examples/pmemkv_basic_c/pmemkv_basic.c
-		example_content)
-	string(REGEX REPLACE "([/]+[*]+).*([*]+[/]+)([\n]+#)" "#"
-		example_content "${example_content}")
-	set(C_EXAMPLE "${example_content}")
+
+	strip_example(${CMAKE_SOURCE_DIR}/examples/pmemkv_basic_c/pmemkv_basic.c C_EXAMPLE)
 	configure_file(${CMAKE_SOURCE_DIR}/doc/libpmemkv.3.md.in
 		${CMAKE_BINARY_DIR}/man/tmp/libpmemkv.3.md)
 
-	# Prepare C_EXAMPLE content to inject, based on the code
-	# of the 'examples/pmemkv_config_c/pmemkv_config.c' example;
-	# remove comments (with the license and the file description)
-	# up to the first preprocessor's directive.
-	file(READ
+	strip_example(
 		${CMAKE_SOURCE_DIR}/examples/pmemkv_config_c/pmemkv_config.c
-		example_content)
-	string(REGEX REPLACE "([/]+[*]+).*([*]+[/]+)([\n]+#)" "#"
-		example_content "${example_content}")
-	set(C_EXAMPLE "${example_content}")
+		CONFIG_TYPE_BASED_EXAMPLE)
+	strip_example(
+		${CMAKE_SOURCE_DIR}/examples/pmemkv_config_c/pmemkv_basic_config.c
+		CONFIG_BASIC_EXAMPLE)
 	configure_file(${CMAKE_SOURCE_DIR}/doc/libpmemkv_config.3.md.in
 		${CMAKE_BINARY_DIR}/man/tmp/libpmemkv_config.3.md)
 
@@ -75,6 +77,7 @@ else()
 	message(WARNING "pandoc not found - man pages will not be generated")
 endif()
 
+# prepare C++ documentation (using doxygen format)
 include(FindDoxygen)
 if(DOXYGEN_FOUND AND DOXYGEN_DOT_FOUND)
 	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/libpmemkv.Doxyfile.in"
@@ -86,6 +89,7 @@ else()
 	message(WARNING "Dot tool not found - Doxygen documentation will not be generated")
 endif()
 
+# set 'doc' target for make
 if(PANDOC AND DOXYGEN_FOUND AND DOXYGEN_DOT_FOUND)
 	add_custom_target(doc ALL
 		${DOXYGEN_EXECUTABLE} "${CMAKE_CURRENT_BINARY_DIR}/libpmemkv.Doxyfile"

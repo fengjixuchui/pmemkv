@@ -25,18 +25,21 @@ static void errormsg_test()
 	 */
 	pmem::kv::db kv;
 	auto s = kv.open("non-existing name");
-	UT_ASSERT(s == pmem::kv::status::WRONG_ENGINE_NAME);
+	ASSERT_STATUS(s, pmem::kv::status::WRONG_ENGINE_NAME);
 
 	auto err = pmem::kv::errormsg();
 	UT_ASSERT(err.size() > 0);
 
 	s = kv.open("non-existing name");
-	UT_ASSERT(s == pmem::kv::status::WRONG_ENGINE_NAME);
+	ASSERT_STATUS(s, pmem::kv::status::WRONG_ENGINE_NAME);
 	s = kv.open("non-existing name");
-	UT_ASSERT(s == pmem::kv::status::WRONG_ENGINE_NAME);
+	ASSERT_STATUS(s, pmem::kv::status::WRONG_ENGINE_NAME);
 
 	/* Test whether errormsg is cleared correctly after each error */
 	UT_ASSERT(pmem::kv::errormsg() == err);
+
+	/* Test if instance of db reports the same error */
+	UT_ASSERT(kv.errormsg() == err);
 
 	kv.close();
 }
@@ -71,6 +74,10 @@ int main()
 
 #ifndef ENGINE_CACHING
 	UT_ASSERT(wrong_engine_name_test("caching"));
+#endif
+
+#ifndef ENGINE_RADIX
+	UT_ASSERT(wrong_engine_name_test("radix"));
 #endif
 
 	errormsg_test();

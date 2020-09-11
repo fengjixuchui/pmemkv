@@ -30,7 +30,6 @@ function tests_gcc_debug_cpp11() {
 		-DTEST_DIR=$TEST_DIR \
 		-DCMAKE_INSTALL_PREFIX=$PREFIX \
 		-DCOVERAGE=$COVERAGE \
-		-DENGINE_STREE=1 \
 		-DBUILD_JSON_CONFIG=${BUILD_JSON_CONFIG} \
 		-DCHECK_CPP_STYLE=${CHECK_CPP_STYLE} \
 		-DTESTS_LONG=${TESTS_LONG} \
@@ -66,6 +65,7 @@ function tests_gcc_debug_cpp14() {
 		-DCMAKE_INSTALL_PREFIX=$PREFIX \
 		-DCOVERAGE=$COVERAGE \
 		-DENGINE_CSMAP=1 \
+		-DENGINE_RADIX=1 \
 		-DBUILD_JSON_CONFIG=${BUILD_JSON_CONFIG} \
 		-DTESTS_LONG=${TESTS_LONG} \
 		-DDEVELOPER_MODE=1 \
@@ -100,14 +100,14 @@ function tests_gcc_debug_cpp14_valgrind_other() {
 		-DCMAKE_INSTALL_PREFIX=$PREFIX \
 		-DCOVERAGE=$COVERAGE \
 		-DENGINE_CSMAP=1 \
-		-DENGINE_STREE=1 \
+		-DENGINE_RADIX=1 \
 		-DBUILD_JSON_CONFIG=${BUILD_JSON_CONFIG} \
 		-DTESTS_LONG=${TESTS_LONG} \
 		-DTESTS_USE_FORCED_PMEM=1 \
 		-DCXX_STANDARD=14
 
 	make -j$(nproc)
-	ctest -E "_none|_memcheck|_drd" --timeout 590 --output-on-failure
+	ctest -R "_helgrind|_pmemcheck|_pmreorder" --timeout 590 --output-on-failure
 
 	if [ "$COVERAGE" == "1" ]; then
 		upload_codecov gcc_debug_cpp14_valgrind_other
@@ -133,6 +133,7 @@ function tests_gcc_debug_cpp14_valgrind_memcheck_drd() {
 		-DCMAKE_INSTALL_PREFIX=$PREFIX \
 		-DCOVERAGE=$COVERAGE \
 		-DENGINE_CSMAP=1 \
+		-DENGINE_RADIX=1 \
 		-DBUILD_JSON_CONFIG=${BUILD_JSON_CONFIG} \
 		-DTESTS_LONG=${TESTS_LONG} \
 		-DTESTS_USE_FORCED_PMEM=1 \
@@ -171,6 +172,7 @@ function tests_clang_release_cpp20() {
 		-DTEST_DIR=$TEST_DIR \
 		-DCMAKE_INSTALL_PREFIX=$PREFIX \
 		-DCOVERAGE=$COVERAGE \
+		-DENGINE_RADIX=1 \
 		-DBUILD_JSON_CONFIG=${BUILD_JSON_CONFIG} \
 		-DTESTS_LONG=${TESTS_LONG} \
 		-DTESTS_USE_FORCED_PMEM=1 \
@@ -228,9 +230,12 @@ function test_release_installation() {
 	# Expect failure - non-existing path is passed
 	run_example_standalone pmemkv_open_cpp /non-existing/path && exit 1
 
-	# Uninstall libraries
+	# Uninstall libraries and cleanup build dirs
 	cd $WORKDIR/build
 	sudo_password -S make uninstall
+	cd $WORKDIR
+	rm -rf build
+	rm -rf $EXAMPLE_TEST_DIR
 
 	printf "$(tput setaf 1)$(tput setab 7)BUILD ${FUNCNAME[0]} END$(tput sgr 0)\n\n"
 }

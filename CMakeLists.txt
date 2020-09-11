@@ -16,8 +16,8 @@ option(BUILD_JSON_CONFIG "build the 'libpmemkv_json_config' library" ON)
 option(TESTS_LONG "enable long running tests" OFF)
 option(TESTS_USE_FORCED_PMEM "run tests with PMEM_IS_PMEM_FORCE=1" OFF)
 option(TESTS_USE_VALGRIND "enable tests with valgrind (if found)" ON)
-option(TESTS_PMEMOBJ_DRD_HELGRIND "enable test of pmemobj engines under drd and helgrind (they should only be run on PMEM)")
-option(TESTS_JSON "enable tests which require libpmemkv_json_config library (BUILD_JSON_CONFIG have to be ON)" ON)
+option(TESTS_PMEMOBJ_DRD_HELGRIND "enable test of pmemobj engines under drd and helgrind (they should only be run on PMEM)" OFF)
+option(TESTS_JSON "enable tests which require libpmemkv_json_config library (BUILD_JSON_CONFIG has to be ON)" ON)
 option(COVERAGE "run coverage test" OFF)
 
 option(DEVELOPER_MODE "enable developer's checks" OFF)
@@ -32,6 +32,7 @@ option(ENGINE_CSMAP "enable experimental csmap engine (requires CXX_STANDARD to 
 option(ENGINE_CACHING "enable experimental caching engine" OFF)
 option(ENGINE_STREE "enable experimental stree engine" ON)
 option(ENGINE_TREE3 "enable experimental tree3 engine" OFF)
+option(ENGINE_RADIX "enable experimental radix engine" OFF)
 
 ## Set required and useful variables
 set(CXX_STANDARD 11 CACHE STRING "C++ language standard")
@@ -121,6 +122,12 @@ if(ENGINE_TREE3)
 		src/engines-experimental/tree3.cc
 	)
 endif()
+if(ENGINE_RADIX)
+	list(APPEND SOURCE_FILES
+		src/engines-experimental/radix.h
+		src/engines-experimental/radix.cc
+	)
+endif()
 
 ## Setup defines and check status of each engine
 if(ENGINE_CMAP)
@@ -169,6 +176,12 @@ if(ENGINE_TREE3)
 else()
 	message(STATUS "TREE3 engine is OFF")
 endif()
+if(ENGINE_RADIX)
+	add_definitions(-DENGINE_RADIX)
+	message(STATUS "RADIX engine is ON")
+else()
+	message(STATUS "RADIX engine is OFF")
+endif()
 
 ## Set compiler's flags
 if(DEVELOPER_MODE)
@@ -200,7 +213,7 @@ include(FindThreads)
 include(CheckCXXSourceCompiles)
 include(GNUInstallDirs)
 
-if(ENGINE_VSMAP OR ENGINE_VCMAP OR ENGINE_CMAP OR ENGINE_CSMAP OR ENGINE_STREE OR ENGINE_TREE3)
+if(ENGINE_VSMAP OR ENGINE_VCMAP OR ENGINE_CMAP OR ENGINE_CSMAP OR ENGINE_STREE OR ENGINE_TREE3 OR ENGINE_RADIX)
 	include(libpmemobj++)
 	list(APPEND PKG_CONFIG_REQUIRES "libpmemobj++ >= ${LIBPMEMOBJ_CPP_REQUIRED_VERSION}")
 	list(APPEND RPM_DEPENDS "libpmemobj >= ${LIBPMEMOBJ_REQUIRED_VERSION}")
@@ -243,7 +256,7 @@ target_include_directories(pmemkv PRIVATE src/valgrind)
 # Enable libpmemobj-cpp valgrind annotations
 target_compile_options(pmemkv PRIVATE -DLIBPMEMOBJ_CPP_VG_ENABLED=1)
 
-if(ENGINE_VSMAP OR ENGINE_VCMAP OR ENGINE_CMAP OR ENGINE_CSMAP OR ENGINE_STREE OR ENGINE_TREE3)
+if(ENGINE_VSMAP OR ENGINE_VCMAP OR ENGINE_CMAP OR ENGINE_CSMAP OR ENGINE_STREE OR ENGINE_TREE3 OR ENGINE_RADIX)
 	target_link_libraries(pmemkv PRIVATE ${LIBPMEMOBJ++_LIBRARIES})
 endif()
 if(ENGINE_VSMAP OR ENGINE_VCMAP)
@@ -297,8 +310,9 @@ if(CHECK_CPP_STYLE)
 	set(CLANG_FORMAT_REQUIRED "9.0")
 	if(CLANG_FORMAT)
 		get_program_version_major_minor(${CLANG_FORMAT} CLANG_FORMAT_VERSION)
+		message(STATUS "Found clang-format: ${CLANG_FORMAT} (version: ${CLANG_FORMAT_VERSION})")
 		if(NOT (CLANG_FORMAT_VERSION VERSION_EQUAL CLANG_FORMAT_REQUIRED))
-			message(FATAL_ERROR "required clang-format version is ${CLANG_FORMAT_REQUIRED} (version ${CLANG_FORMAT_VERSION} is installed)")
+			message(FATAL_ERROR "required clang-format version is ${CLANG_FORMAT_REQUIRED}")
 		endif()
 	else()
 		message(FATAL_ERROR "CHECK_CPP_STYLE=ON, but clang-format not found (required version: ${CLANG_FORMAT_REQUIRED})")
@@ -362,7 +376,7 @@ if(BUILD_JSON_CONFIG)
 	)
 
 	add_library(pmemkv_json_config SHARED ${SOURCE_FILES_JSON_CONFIG})
-	set_target_properties(pmemkv_json_config  PROPERTIES SOVERSION 1)
+	set_target_properties(pmemkv_json_config PROPERTIES SOVERSION 1)
 	target_link_libraries(pmemkv_json_config PRIVATE pmemkv ${RapidJSON_LIBRARIES}
 		-Wl,--version-script=${CMAKE_SOURCE_DIR}/src/libpmemkv_json_config.map)
 	set_target_properties(pmemkv_json_config
@@ -384,28 +398,6 @@ if(BUILD_EXAMPLES)
 endif()
 
 if(BUILD_TESTS)
-	if(PKG_CONFIG_FOUND)
-		pkg_check_modules(VALGRIND QUIET valgrind)
-	else()
-		find_package(VALGRIND QUIET)
-	endif()
-
-	if(NOT VALGRIND_FOUND AND TESTS_USE_VALGRIND)
-		message(FATAL_ERROR "Valgrind not found, but flag TESTS_USE_VALGRIND was set.")
-	endif()
-
-	if(VALGRIND_FOUND)
-		find_pmemcheck()
-	endif()
-
-	if(PKG_CONFIG_FOUND)
-		pkg_check_modules(LIBPMEMOBJ REQUIRED libpmemobj>=${LIBPMEMOBJ_REQUIRED_VERSION})
-		pkg_check_modules(LIBPMEM REQUIRED libpmem>=${LIBPMEM_REQUIRED_VERSION})
-	else()
-		find_package(LIBPMEMOBJ REQUIRED ${LIBPMEMOBJ_REQUIRED_VERSION})
-		find_package(LIBPMEM REQUIRED ${LIBPMEM_REQUIRED_VERSION})
-	endif()
-
 	enable_testing()
 	add_subdirectory(tests)
 endif()

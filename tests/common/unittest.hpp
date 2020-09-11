@@ -20,6 +20,7 @@
 #include <functional>
 #include <iostream>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <type_traits>
@@ -87,6 +88,22 @@ static inline void UT_EXCEPTION(std::exception &e)
 			UT_FATAL("%s: violated offset checkpoint -- "                    \
 				 "checkpoint %lu, real offset %lu",                      \
 				 STR(type), checkpoint, off);                            \
+	} while (0)
+
+#define ASSERT_STATUS(status, expected_status)                                           \
+	do {                                                                             \
+		auto current_status = status;                                            \
+		UT_ASSERTeq(current_status, expected_status);                            \
+		std::string expected_string = #expected_status;                          \
+		expected_string.erase(0, expected_string.rfind(":") + 1);                \
+		expected_string +=                                                       \
+			" (" + std::to_string(static_cast<int>(expected_status)) + ")";  \
+		std::ostringstream oss;                                                  \
+		oss << current_status;                                                   \
+		if (oss.str() != expected_string)                                        \
+			UT_FATAL("%s:%d %s - wrong status message (%s), should be: %s",  \
+				 __FILE__, __LINE__, __func__, oss.str().c_str(),        \
+				 expected_string.c_str());                               \
 	} while (0)
 
 static inline int run_test(std::function<void()> test)
@@ -158,7 +175,7 @@ pmem::kv::db INITIALIZE_KV(std::string engine, pmem::kv::config &&config)
 {
 	pmem::kv::db kv;
 	auto s = kv.open(engine, std::move(config));
-	UT_ASSERTeq(s, pmem::kv::status::OK);
+	ASSERT_STATUS(s, pmem::kv::status::OK);
 
 	return kv;
 }
@@ -173,7 +190,7 @@ void CLEAR_KV(pmem::kv::db &kv)
 	});
 
 	for (auto &k : keys)
-		kv.remove(k);
+		ASSERT_STATUS(kv.remove(k), pmem::kv::status::OK);
 }
 
 #ifdef JSON_TESTS_SUPPORT
