@@ -60,7 +60,7 @@ git checkout -B ${GH_PAGES_NAME} upstream/gh-pages
 git clean -dfx
 
 # Clean old content, since some files might have been deleted
-rm -r ./${VERSION}
+rm -rf ./${VERSION}
 mkdir -p ./${VERSION}/manpages/
 mkdir -p ./${VERSION}/doxygen/
 
@@ -85,4 +85,3 @@ git push -f ${ORIGIN} ${GH_PAGES_NAME}
 hub pull-request -f -b ${DOC_REPO_OWNER}:gh-pages -h ${BOT_NAME}:${GH_PAGES_NAME} -m "doc: automatic gh-pages docs update" && true
 
 popd
-exit 0

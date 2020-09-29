@@ -142,9 +142,6 @@ engines_flags=(
 	ENGINE_VCMAP
 	ENGINE_CMAP
 	ENGINE_CSMAP
-	# XXX: caching engine requires libacl and memcached installed in docker images
-	# and firstly we need to remove hardcoded INCLUDE paths (see #244)
-	# ENGINE_CACHING
 	ENGINE_STREE
 	ENGINE_TREE3
 	ENGINE_RADIX
@@ -215,16 +212,3 @@ case $PACKAGE_MANAGER in
 		echo "Notice: skipping building of packages because PACKAGE_MANAGER is not equal 'rpm' nor 'deb' ..."
 		;;
 esac
-
-# Trigger auto doc update
-if [[ "$AUTO_DOC_UPDATE" == "1" ]]; then
-	echo "Running auto doc update"
-
-	mkdir -p $WORKDIR/doc_update
-	cd $WORKDIR/doc_update
-
-	$SCRIPTSDIR/run-doc-update.sh
-
-	cd $WORKDIR
-	rm -rf $WORKDIR/doc_update
-fi

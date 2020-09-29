@@ -74,7 +74,12 @@ HIDE_UNDOC_CLASSES = NO
 # standard output by doxygen. If QUIET is set to YES this implies that the
 # messages are off.
 
-QUIET = YES
+QUIET = NO
+
+# The COLS_IN_ALPHA_INDEX tag can be used to specify the number of columns
+# in which the alphabetical index list will be split.
+
+COLS_IN_ALPHA_INDEX = 1
 
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
@@ -224,3 +229,5 @@ HTML_TIMESTAMP = NO
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED = __cpp_lib_uncaught_exceptions _WIN32
+
+WARN_AS_ERROR = @DOXYGEN_WARN_AS_ERROR@

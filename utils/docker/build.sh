@@ -19,23 +19,15 @@ set -e
 
 source $(dirname $0)/set-ci-vars.sh
 source $(dirname $0)/set-vars.sh
-source $(dirname $0)/valid-branches.sh
 
-doc_varialbes_error="To build documentation and upload it as github pull request \
-variables 'DOC_UPDATE_BOT_NAME' and 'DOC_UPDATE_GITHUB_TOKEN' have to be provided. \
-for more details please read CONTRIBUTION.md"
+doc_variables_error="To build documentation and upload it as a Github pull request, \
+variables 'DOC_UPDATE_BOT_NAME', 'DOC_REPO_OWNER' and 'DOC_UPDATE_GITHUB_TOKEN' have to be provided. \
+For more details please read CONTRIBUTING.md"
 
 if [[ "$CI_EVENT_TYPE" != "cron" && "$CI_BRANCH" != "coverity_scan" \
 	&& "$TYPE" == "coverity" ]]; then
 	echo "INFO: Skip Coverity scan job if build is triggered neither by " \
 		"'cron' nor by a push to 'coverity_scan' branch"
-	exit 0
-fi
-
-if [[ ( "$CI_EVENT_TYPE" == "cron" || "$CI_BRANCH" == "coverity_scan" )\
-	&& "$TYPE" != "coverity" ]]; then
-	echo "INFO: Skip regular jobs if build is triggered either by 'cron'" \
-		" or by a push to 'coverity_scan' branch"
 	exit 0
 fi
 
@@ -50,7 +42,6 @@ if [[ -z "$HOST_WORKDIR" ]]; then
 		"the root of this project on the host machine"
 	exit 1
 fi
-
 
 imageName=${DOCKERHUB_REPO}:1.3-${OS}-${OS_VER}
 containerName=pmemkv-${OS}-${OS_VER}
@@ -88,8 +79,8 @@ if [[ "$command" == "" ]]; then
 			command="./run-bindings.sh";
 			;;
 		doc)
-			if [[ -z "${DOC_UPDATE_BOT_NAME}" || -z "${DOC_UPDATE_GITHUB_TOKEN}" ]]; then
-				echo "${doc_varialbes_error}"
+			if [[ -z "${DOC_UPDATE_BOT_NAME}" || -z "${DOC_UPDATE_GITHUB_TOKEN}" || -z "${DOC_REPO_OWNER}" ]]; then
+				echo "${doc_variables_error}"
 				exit 0
 			fi
 			command="./run-doc-update.sh";
@@ -131,7 +122,6 @@ docker run --privileged=true --name=$containerName -i $TTY \
 	--env WORKDIR=$WORKDIR \
 	--env SCRIPTSDIR=$SCRIPTSDIR \
 	--env COVERAGE=$COVERAGE \
-	--env AUTO_DOC_UPDATE=$AUTO_DOC_UPDATE \
 	--env CI_RUN=$CI_RUN \
 	--env TRAVIS=$TRAVIS \
 	--env GITHUB_REPO=$GITHUB_REPO \
@@ -150,13 +140,12 @@ docker run --privileged=true --name=$containerName -i $TTY \
 	--env DOC_UPDATE_GITHUB_TOKEN=$DOC_UPDATE_GITHUB_TOKEN \
 	--env DOC_UPDATE_BOT_NAME=$DOC_UPDATE_BOT_NAME \
 	--env DOC_REPO_OWNER=$DOC_REPO_OWNER \
-	--env GITHUB_TOKEN=$GITHUB_TOKEN \
 	--env COVERITY_SCAN_TOKEN=$COVERITY_SCAN_TOKEN \
 	--env COVERITY_SCAN_NOTIFICATION_EMAIL=$COVERITY_SCAN_NOTIFICATION_EMAIL \
 	--env TEST_PACKAGES=${TEST_PACKAGES:-ON} \
 	--env TESTS_LONG=${TESTS_LONG:-OFF} \
 	--env BUILD_JSON_CONFIG=${BUILD_JSON_CONFIG:-ON} \
-	--env CHECK_CPP_STYLE=${CHECK_CPP_STYLE:-ON} \
+	--env CHECK_CPP_STYLE=${CHECK_CPP_STYLE:-OFF} \
 	--env DEFAULT_TEST_DIR=/dev/shm \
 	--shm-size=4G \
 	-v $HOST_WORKDIR:$WORKDIR \
